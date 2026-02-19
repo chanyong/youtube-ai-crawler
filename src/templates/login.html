@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="card" style="max-width:460px;margin:40px auto 0;">
+  <h2>로그인</h2>
+  <p>회원별 채널/키/이메일 설정으로 자동 요약 메일을 발송합니다.</p>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>계정 이메일</label>
+    <input name="account_email" type="email" required>
+    <label>비밀번호</label>
+    <input name="password" type="password" required>
+    <button type="submit">로그인</button>
+  </form>
+  <div class="small">계정이 없다면 <a href="/register">회원가입</a></div>
+</div>
+{% endblock %}

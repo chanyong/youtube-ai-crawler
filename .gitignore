@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtualenv
+.venv/
+venv/
+
+# Environment
+.env
+
+# Data
+*.db
+data/*.db
+
+# Logs
+*.log
+
+# macOS
+.DS_Store

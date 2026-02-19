@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block nav %}
+<div class="nav">
+  <a href="/dashboard" class="nav-brand">YouTube Crawl Tracker</a>
+  <div class="nav-links">
+    <span class="small">{{ user['account_email'] }}</span>
+    <a href="/dashboard">대시보드</a>
+    <a href="/settings">설정</a>
+    <form method="post" action="/logout">
+      <button type="submit" class="link-btn">로그아웃</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block body %}
+<!-- 알림 메시지 -->
+{% if msg %}
+  {% if msg.startswith('run-done') %}
+    <div class="msg-success">스캔 완료 — 최근 에피소드 {{ msg.split(':')[1] if ':' in msg else '0' }}건 갱신됨</div>
+  {% elif msg.startswith('summary-generate-done') %}
+    <div class="msg-success">
+      요약 내역 생성 완료 — 성공 {{ msg.split(':')[1] if msg.count(':') >= 2 else '0' }}건 / 실패 {{ msg.split(':')[2] if msg.count(':') >= 2 else '0' }}건
+    </div>
+  {% elif msg == 'summary-generate-no-selection' %}
+    <div class="error">최근 스캔 에피소드에서 체크 후 '생성 대상 이동'을 먼저 누르세요.</div>
+  {% elif msg == 'summary-generate-config-missing' %}
+    <div class="error">OpenAI API 키가 설정되지 않았습니다. 설정 페이지에서 먼저 등록하세요.</div>
+  {% elif msg == 'channel-added' %}
+    <div class="msg-success">채널이 추가되었습니다.</div>
+  {% elif msg == 'channel-deleted' %}
+    <div class="msg">채널이 삭제되었습니다.</div>
+  {% elif msg == 'generated-deleted' %}
+    <div class="msg">생성 내역이 삭제되었습니다.</div>
+  {% elif msg == 'registered' %}
+    <div class="msg-success">가입 완료! 설정 페이지에서 OpenAI API 키를 등록하세요.</div>
+  {% elif msg.startswith('add-failed') %}
+    <div class="error">채널 추가 실패: {{ msg.split(':', 1)[1] if ':' in msg else '' }}</div>
+  {% else %}
+    <div class="msg">{{ msg }}</div>
+  {% endif %}
+{% endif %}
+
+<!-- 채널 등록 + 즉시 실행 -->
+<div class="card">
+  <h3>유튜브 채널 등록</h3>
+  <form method="post" action="/channels/add">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>채널 URL / @handle / UC... ID</label>
+    <div class="row">
+      <input name="source" required placeholder="https://www.youtube.com/@Fireship" style="flex:3;">
+      <button type="submit" style="flex:1;">채널 추가</button>
+    </div>
+  </form>
+  <form method="post" action="/run-now" style="margin-top:4px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button type="submit" class="btn-warning">지금 스캔 설정</button>
+  </form>
+</div>
+
+<!-- 내 채널 목록 -->
+<div class="card">
+  <h3>내 채널 목록</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>채널명</th>
+        <th>채널 ID</th>
+        <th>원본 입력</th>
+        <th style="width:80px;">관리</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in channels %}
+      <tr>
+        <td>{{ c['title'] or '-' }}</td>
+        <td class="small">{{ c['channel_id'] }}</td>
+        <td class="small">{{ c['source'] }}</td>
+        <td>
+          <form method="post" action="/channels/delete" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="hidden" name="channel_pk" value="{{ c['id'] }}">
+            <button type="submit" class="btn-danger btn-sm">삭제</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not channels %}
+      <tr><td colspan="4" class="small">등록된 채널이 없습니다.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<!-- 최근 스캔 에피소드 -->
+<div class="card">
+  <h3>최근 스캔 에피소드</h3>
+  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div class="small">체크한 항목을 생성 대상으로 이동합니다.</div>
+    <button type="button" id="move-to-target-btn" class="btn-warning" style="max-width:220px;">생성 대상 이동</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:48px;">선택</th>
+        <th>영상 제목</th>
+        <th>채널</th>
+        <th>공개 시각</th>
+        <th>스캔 시각</th>
+        <th style="width:80px;">링크</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in scanned_items %}
+      <tr>
+        <td>
+          <input
+            type="checkbox"
+            class="scan-select"
+            value="{{ s['video_id'] }}"
+            data-title="{{ (s['video_title'] or s['video_id']) | e }}"
+            data-channel="{{ (s['channel_title'] or s['channel_id']) | e }}"
+            data-url="{{ (s['video_url'] or ('https://www.youtube.com/watch?v=' ~ s['video_id'])) | e }}"
+            style="width:18px;height:18px;margin:0;"
+          >
+        </td>
+        <td>{{ s['video_title'] or s['video_id'] }}</td>
+        <td class="small">{{ s['channel_title'] or s['channel_id'] }}</td>
+        <td class="small">
+          {% if s['published_at'] %}
+          <span class="local-datetime" data-utc="{{ s['published_at'] | e }}">{{ s['published_at'] }}</span>
+          {% else %}
+          -
+          {% endif %}
+        </td>
+        <td class="small"><span class="local-datetime" data-utc="{{ s['scanned_at'] | e }}">{{ s['scanned_at'] }}</span></td>
+        <td>
+          <a href="{{ s['video_url'] or ('https://www.youtube.com/watch?v=' ~ s['video_id']) }}" target="_blank" class="btn-sm" style="color:var(--brand);">보기</a>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not scanned_items %}
+      <tr><td colspan="6" class="small">아직 스캔된 에피소드가 없습니다. '지금 스캔 설정'을 눌러주세요.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+  <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px;">
+    <div class="small">페이지 {{ scanned_page }} / {{ scanned_total_pages }}</div>
+    <div class="small">
+      {% if scanned_page > 1 %}
+        <a href="/dashboard?generated_page={{ generated_page }}&scanned_page={{ scanned_page - 1 }}">이전</a>
+      {% endif %}
+      {% if scanned_page > 1 and scanned_page < scanned_total_pages %} | {% endif %}
+      {% if scanned_page < scanned_total_pages %}
+        <a href="/dashboard?generated_page={{ generated_page }}&scanned_page={{ scanned_page + 1 }}">다음</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- 생성 대상 -->
+<div class="card">
+  <h3>생성 대상</h3>
+  <form method="post" action="/generate-summaries" id="generate-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <input type="hidden" name="generated_page" value="{{ generated_page }}">
+    <input type="hidden" name="scanned_page" value="{{ scanned_page }}">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div class="small">선택된 항목만 요약 내역 생성됩니다.</div>
+      <button type="submit" class="btn-warning" style="max-width:220px;">요약 내역 생성</button>
+    </div>
+    <div id="target-hidden-inputs"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>영상 제목</th>
+          <th>채널</th>
+          <th style="width:80px;">링크</th>
+          <th style="width:80px;">관리</th>
+        </tr>
+      </thead>
+      <tbody id="target-list-body">
+        <tr><td colspan="4" class="small">생성 대상이 없습니다. 위에서 체크 후 '생성 대상 이동'을 누르세요.</td></tr>
+      </tbody>
+    </table>
+  </form>
+</div>
+
+<!-- 최근 생성 내역 -->
+<div class="card">
+  <h3>최근 생성내역</h3>
+    <table>
+    <thead>
+      <tr>
+        <th>영상 제목</th>
+        <th>채널</th>
+        <th>생성 시각</th>
+        <th style="width:90px;">상세</th>
+        <th style="width:80px;">삭제</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in generated_items %}
+      <tr>
+        <td>{{ h['video_title'] or h['video_id'] }}</td>
+        <td class="small">{{ h['channel_title'] or h['channel_id'] }}</td>
+        <td class="small"><span class="local-datetime" data-utc="{{ h['generated_at'] | e }}">{{ h['generated_at'] }}</span></td>
+        <td>
+          <button
+            type="button"
+            class="btn-sm open-summary-btn"
+            data-title="{{ (h['video_title'] or h['video_id']) | e }}"
+            data-channel="{{ (h['channel_title'] or h['channel_id']) | e }}"
+            data-url="{{ (h['video_url'] or ('https://www.youtube.com/watch?v=' ~ h['video_id'])) | e }}"
+            data-summary="{{ (h['summary_ko'] or h['error_message'] or '내용이 없습니다.') | e }}"
+          >
+            팝업보기
+          </button>
+        </td>
+        <td>
+          <form method="post" action="/generated/delete" style="margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <input type="hidden" name="generated_page" value="{{ generated_page }}">
+            <input type="hidden" name="scanned_page" value="{{ scanned_page }}">
+            <input type="hidden" name="video_id" value="{{ h['video_id'] }}">
+            <button type="submit" class="btn-danger btn-sm">삭제</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not generated_items %}
+      <tr><td colspan="5" class="small">아직 생성된 내역이 없습니다. 스캔 후 생성을 해주세요.</td></tr>
+      {% endif %}
+    </tbody>
+    </table>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-top:10px;">
+      <div class="small">페이지 {{ generated_page }} / {{ generated_total_pages }}</div>
+      <div class="small">
+        {% if generated_page > 1 %}
+          <a href="/dashboard?generated_page={{ generated_page - 1 }}&scanned_page={{ scanned_page }}">이전</a>
+        {% endif %}
+        {% if generated_page > 1 and generated_page < generated_total_pages %} | {% endif %}
+        {% if generated_page < generated_total_pages %}
+          <a href="/dashboard?generated_page={{ generated_page + 1 }}&scanned_page={{ scanned_page }}">다음</a>
+        {% endif %}
+      </div>
+    </div>
+</div>
+
+<div id="summary-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:50;align-items:center;justify-content:center;padding:16px;">
+  <div style="width:min(860px, 100%);max-height:90vh;overflow:auto;background:#fff;border-radius:12px;border:1px solid #d9e2ec;padding:18px;">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+      <h3 id="summary-modal-title" style="margin:0;">요약 상세</h3>
+      <button type="button" id="summary-modal-close" class="btn-sm btn-danger">닫기</button>
+    </div>
+    <div class="small" id="summary-modal-channel" style="margin-top:6px;"></div>
+    <div class="small" id="summary-modal-url" style="margin-top:4px;"></div>
+    <pre id="summary-modal-body" style="margin-top:12px;white-space:pre-wrap;line-height:1.7;background:#f8fafc;border:1px solid #d9e2ec;border-radius:8px;padding:12px;"></pre>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById("summary-modal");
+    const closeBtn = document.getElementById("summary-modal-close");
+    const titleEl = document.getElementById("summary-modal-title");
+    const channelEl = document.getElementById("summary-modal-channel");
+    const urlEl = document.getElementById("summary-modal-url");
+    const bodyEl = document.getElementById("summary-modal-body");
+    const moveBtn = document.getElementById("move-to-target-btn");
+    const targetBody = document.getElementById("target-list-body");
+    const targetInputs = document.getElementById("target-hidden-inputs");
+    const selectedTargets = new Map();
+
+    function openModal(data) {
+      titleEl.textContent = data.title || "요약 상세";
+      channelEl.textContent = "채널: " + (data.channel || "-");
+      urlEl.innerHTML = '영상: <a href="' + (data.url || "#") + '" target="_blank" style="color:var(--brand);">' + (data.url || "-") + "</a>";
+      bodyEl.textContent = data.summary || "내용이 없습니다.";
+      modal.style.display = "flex";
+    }
+
+    function closeModal() {
+      modal.style.display = "none";
+    }
+
+    function formatLocalDateTimes() {
+      const fmt = new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      document.querySelectorAll(".local-datetime").forEach(function (el) {
+        const raw = el.dataset.utc || "";
+        const dt = new Date(raw);
+        if (!Number.isNaN(dt.getTime())) {
+          el.textContent = fmt.format(dt);
+        }
+      });
+    }
+
+    function renderTargets() {
+      targetInputs.innerHTML = "";
+      if (selectedTargets.size === 0) {
+        targetBody.innerHTML = '<tr><td colspan="4" class="small">생성 대상이 없습니다. 위에서 체크 후 \'생성 대상 이동\'을 누르세요.</td></tr>';
+        return;
+      }
+
+      let html = "";
+      selectedTargets.forEach(function (item, videoId) {
+        html += '<tr>' +
+          '<td>' + item.title + '</td>' +
+          '<td class="small">' + item.channel + '</td>' +
+          '<td><a href="' + item.url + '" target="_blank" class="btn-sm" style="color:var(--brand);">보기</a></td>' +
+          '<td><button type="button" class="btn-danger btn-sm remove-target-btn" data-video-id="' + videoId + '">제거</button></td>' +
+          '</tr>';
+        targetInputs.insertAdjacentHTML("beforeend", '<input type="hidden" name="selected_video_ids" value="' + videoId + '">');
+      });
+      targetBody.innerHTML = html;
+
+      document.querySelectorAll(".remove-target-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          selectedTargets.delete(btn.dataset.videoId);
+          renderTargets();
+        });
+      });
+    }
+
+    document.querySelectorAll(".open-summary-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        openModal({
+          title: btn.dataset.title,
+          channel: btn.dataset.channel,
+          url: btn.dataset.url,
+          summary: btn.dataset.summary,
+        });
+      });
+    });
+
+    closeBtn.addEventListener("click", closeModal);
+    modal.addEventListener("click", function (e) {
+      if (e.target === modal) closeModal();
+    });
+
+    moveBtn.addEventListener("click", function () {
+      document.querySelectorAll(".scan-select:checked").forEach(function (ck) {
+        selectedTargets.set(ck.value, {
+          title: ck.dataset.title || ck.value,
+          channel: ck.dataset.channel || "-",
+          url: ck.dataset.url || ("https://www.youtube.com/watch?v=" + ck.value),
+        });
+        ck.checked = false;
+      });
+      renderTargets();
+    });
+
+    formatLocalDateTimes();
+    renderTargets();
+  })();
+</script>
+{% endblock %}

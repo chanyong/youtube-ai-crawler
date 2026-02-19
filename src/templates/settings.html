@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block nav %}
+<div class="nav">
+  <a href="/dashboard" class="nav-brand">YouTube Crawl Tracker</a>
+  <div class="nav-links">
+    <span class="small">{{ user['account_email'] }}</span>
+    <a href="/dashboard">대시보드</a>
+    <a href="/settings">설정</a>
+    <form method="post" action="/logout">
+      <button type="submit" class="link-btn">로그아웃</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="card">
+  <h2>설정</h2>
+  <p>웹사이트 내 요약 생성을 위한 OpenAI API 키를 저장합니다. API 키는 암호화하여 저장됩니다.</p>
+  {% if msg == 'saved' %}<div class="msg-success">저장되었습니다.</div>{% endif %}
+  {% if msg == 'csrf-error' %}<div class="error">잘못된 요청입니다. 다시 시도해주세요.</div>{% endif %}
+  {% if msg == 'encrypt-key-missing' %}<div class="error">서버 ENCRYPT_KEY가 설정되지 않아 API 키를 저장할 수 없습니다. .env의 ENCRYPT_KEY를 설정한 뒤 서버를 재시작하세요.</div>{% endif %}
+  {% if msg == 'save-failed' %}<div class="error">설정 저장 중 오류가 발생했습니다. 다시 시도해주세요.</div>{% endif %}
+  <form method="post" action="/settings">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>OpenAI API Key (변경 시에만 입력)</label>
+    <input name="openai_api_key" type="password" placeholder="sk-...">
+    <div class="small" style="margin-top:-8px;margin-bottom:12px;">
+      {% if user['openai_api_key'] %}
+        현재 키가 등록되어 있습니다 (암호화 저장됨).
+      {% else %}
+        등록된 키가 없습니다. API 키를 입력하세요.
+      {% endif %}
+    </div>
+    <label>OpenAI 모델</label>
+    <select name="openai_model">
+      <option value="gpt-4o-mini" {{ 'selected' if (user['openai_model'] or 'gpt-4o-mini') == 'gpt-4o-mini' }}>gpt-4o-mini (빠르고 저렴)</option>
+      <option value="gpt-4o" {{ 'selected' if user['openai_model'] == 'gpt-4o' }}>gpt-4o (고품질)</option>
+      <option value="gpt-4.1-mini" {{ 'selected' if user['openai_model'] == 'gpt-4.1-mini' }}>gpt-4.1-mini</option>
+      <option value="gpt-4.1" {{ 'selected' if user['openai_model'] == 'gpt-4.1' }}>gpt-4.1</option>
+    </select>
+    <label>번역/요약 프롬프트 (직접 입력)</label>
+    <textarea name="summary_prompt" rows="6" placeholder="예: 다음은 영어 유튜브 영상 자막입니다. 핵심 논점과 근거를 최대한 상세하게 한국어로 정리해줘." style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);margin:6px 0 12px;font-size:14px;">{{ user['summary_prompt'] or '' }}</textarea>
+    <div class="small" style="margin-top:-8px;margin-bottom:12px;">
+      비워두면 기본 프롬프트를 사용합니다.
+    </div>
+    <button type="submit">저장</button>
+  </form>
+</div>
+{% endblock %}

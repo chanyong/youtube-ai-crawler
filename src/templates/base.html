@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title if title else "YouTube Crawl Tracker" }}</title>
+  <style>
+    :root {
+      --bg: #f2f5f7;
+      --surface: #ffffff;
+      --ink: #102a43;
+      --muted: #486581;
+      --brand: #0b7285;
+      --brand-light: #e0f7fa;
+      --danger: #b42318;
+      --success: #2e7d32;
+      --line: #d9e2ec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+      background: linear-gradient(120deg, #eff8ff, #f0fdf4);
+      color: var(--ink);
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 16px 40px;
+    }
+    /* Navigation */
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-brand {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--brand);
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 16px; align-items: center; }
+    .nav-links a { color: var(--brand); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .nav-links form { margin: 0; }
+    .nav-links button.link-btn {
+      background: none;
+      border: none;
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+      width: auto;
+    }
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    h1, h2, h3 { margin: 0 0 12px; }
+    p { color: var(--muted); }
+    input, select, button {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      margin: 6px 0 12px;
+      font-size: 14px;
+    }
+    button {
+      border: 0;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .small { font-size: 13px; color: var(--muted); }
+    .error { color: var(--danger); font-size: 14px; margin: 8px 0; }
+    .msg { color: var(--brand); font-size: 14px; margin: 8px 0; }
+    .msg-success { color: var(--success); font-size: 14px; margin: 8px 0; }
+    a { color: var(--brand); text-decoration: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; font-size: 13px; }
+    .btn-danger { background: var(--danger); }
+    .btn-warning { background: #e65100; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; width: auto; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    {% block nav %}{% endblock %}
+    {% block body %}{% endblock %}
+  </div>
+</body>
+</html>
