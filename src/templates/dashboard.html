@@ -62,11 +62,11 @@
 
 <!-- 내 채널 목록 -->
 <div class="card">
-  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+  <div style="display:flex;align-items:center;margin-bottom:8px;">
     <h3 style="margin:0;">내 채널 목록</h3>
-    <form method="post" action="/run-now" style="margin:0;">
+    <form method="post" action="/run-now" style="margin:0 0 0 auto;">
       <input type="hidden" name="csrf_token" value="{{ csrf }}">
-      <button type="submit" class="btn-warning" style="max-width:160px;">신규 영상 스캔</button>
+      <button type="submit" class="btn-warning">신규 영상 스캔</button>
     </form>
   </div>
   <table>
