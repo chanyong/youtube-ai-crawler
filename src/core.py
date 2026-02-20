@@ -257,7 +257,9 @@ def _resolve_channel_id_from_page(url: str) -> str:
 def get_feed(channel_id: str):
     feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     feed = feedparser.parse(feed_url)
-    if getattr(feed, "bozo", False):
+    # bozo=True means minor XML issues; YouTube feeds sometimes trigger this.
+    # Only fail if feedparser couldn't extract any entries at all.
+    if getattr(feed, "bozo", False) and not feed.entries:
         raise ValueError(f"피드 조회 실패: {channel_id}")
     return feed
 
