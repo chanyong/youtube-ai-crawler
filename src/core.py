@@ -120,7 +120,7 @@ def db_connection():
 
 
 def init_db() -> None:
-    os.makedirs(BASE_DIR / "data", exist_ok=True)
+    os.makedirs(DB_PATH.parent, exist_ok=True)
     with db_connection() as con:
         cur = con.cursor()
         cur.execute(
