@@ -31,7 +31,9 @@ from yt_dlp import YoutubeDL
 # Paths
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = BASE_DIR / "data" / "app.db"
+# Railway Volume 사용 시 DB_PATH 환경변수로 경로 지정 가능
+# 예) DB_PATH=/data/app.db  (Railway Volume을 /data에 마운트한 경우)
+DB_PATH = Path(os.environ.get("DB_PATH", str(BASE_DIR / "data" / "app.db")))
 
 # ---------------------------------------------------------------------------
 # Encryption helpers  (API 키 암호화 저장)
