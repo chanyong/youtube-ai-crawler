@@ -3,6 +3,7 @@ web.py — FastAPI 웹 플랫폼
 회원가입 → 채널/키/이메일 등록 → 백그라운드 워커 자동 요약 발송
 """
 
+import hashlib
 import os
 import secrets
 import sqlite3
@@ -251,15 +252,36 @@ def generate_summaries_from_scanned(
 # ---------------------------------------------------------------------------
 # App lifespan
 # ---------------------------------------------------------------------------
+def _resolve_session_secret() -> str:
+    """SESSION_SECRET 미설정 시 ENCRYPT_KEY에서 파생한 결정론적 키를 반환.
+
+    Railway 등 멀티 replica 환경에서 각 프로세스가 다른 랜덤 시크릿을 쓰면
+    replica 간 세션 불일치로 CSRF 오류가 발생한다.
+    ENCRYPT_KEY가 있으면 그것을 기반으로 고정 키를 만들어 모든 replica가
+    동일한 시크릿을 사용하도록 한다.
+    """
+    explicit = os.environ.get("SESSION_SECRET", "")
+    if explicit:
+        return explicit
+    encrypt_key = os.environ.get("ENCRYPT_KEY", "")
+    if encrypt_key:
+        derived = hashlib.sha256(f"session-secret:{encrypt_key}".encode()).hexdigest()
+        print(
+            "[warn] SESSION_SECRET 환경변수가 설정되지 않았습니다. "
+            "ENCRYPT_KEY로부터 파생된 고정 키를 사용합니다. "
+            "보안을 위해 별도의 SESSION_SECRET을 설정하는 것을 권장합니다."
+        )
+        return derived
+    print(
+        "[error] SESSION_SECRET과 ENCRYPT_KEY 모두 설정되지 않았습니다. "
+        "서버 재시작/replica 변경 시 세션이 초기화됩니다."
+    )
+    return secrets.token_hex(32)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    if not os.environ.get("SESSION_SECRET"):
-        print(
-            "[warn] SESSION_SECRET 환경변수가 설정되지 않았습니다. "
-            "서버 재시작 시 모든 로그인 세션이 초기화됩니다. "
-            ".env 또는 Railway 환경변수에 SESSION_SECRET을 설정하세요."
-        )
     if not os.environ.get("ENCRYPT_KEY"):
         print(
             "[warn] ENCRYPT_KEY 환경변수가 설정되지 않았습니다. "
@@ -272,7 +294,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="YouTube Crawl Tracker", lifespan=lifespan)
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.environ.get("SESSION_SECRET", secrets.token_hex(32)),
+    secret_key=_resolve_session_secret(),
 )
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
