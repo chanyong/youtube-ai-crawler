@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, Request
+from fastapi import BackgroundTasks, FastAPI, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -511,12 +511,13 @@ def run_now(request: Request, csrf_token: str = Form("")):
 @app.post("/generate-summaries")
 def generate_summaries(
     request: Request,
+    background_tasks: BackgroundTasks,
     csrf_token: str = Form(""),
     selected_video_ids: Optional[list[str]] = Form(None),
     generated_page: str = Form("1"),
     scanned_page: str = Form("1"),
 ):
-    """최근 스캔 에피소드를 기준으로 한국어 요약 내역을 순차 생성."""
+    """최근 스캔 에피소드를 기준으로 한국어 요약 내역을 백그라운드에서 생성."""
     user, redirect = require_user(request)
     if redirect:
         return redirect
@@ -541,12 +542,14 @@ def generate_summaries(
     if not picked:
         return RedirectResponse(f"/dashboard?msg=summary-generate-no-selection&{base_qs}", status_code=303)
 
-    created, failed = generate_summaries_from_scanned(
+    # 즉시 응답 후 백그라운드에서 처리 — Railway 프록시 타임아웃 방지
+    background_tasks.add_task(
+        generate_summaries_from_scanned,
         user["id"],
-        max_items=20,
-        selected_video_ids=picked,
+        20,
+        picked,
     )
-    return RedirectResponse(f"/dashboard?msg=summary-generate-done:{created}:{failed}&{base_qs}", status_code=303)
+    return RedirectResponse(f"/dashboard?msg=summary-generate-started:{len(picked)}&{base_qs}", status_code=303)
 
 
 # ---------------------------------------------------------------------------
