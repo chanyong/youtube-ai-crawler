@@ -254,6 +254,18 @@ def generate_summaries_from_scanned(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    if not os.environ.get("SESSION_SECRET"):
+        print(
+            "[warn] SESSION_SECRET 환경변수가 설정되지 않았습니다. "
+            "서버 재시작 시 모든 로그인 세션이 초기화됩니다. "
+            ".env 또는 Railway 환경변수에 SESSION_SECRET을 설정하세요."
+        )
+    if not os.environ.get("ENCRYPT_KEY"):
+        print(
+            "[warn] ENCRYPT_KEY 환경변수가 설정되지 않았습니다. "
+            "OpenAI API 키를 저장할 수 없습니다. "
+            "python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\" 로 생성 후 설정하세요."
+        )
     yield
 
 
