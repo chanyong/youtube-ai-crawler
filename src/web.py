@@ -225,7 +225,7 @@ def generate_summaries_from_scanned(
         with db_connection() as con:
             con.execute(
                 """
-                INSERT OR REPLACE INTO generated_items (
+                INSERT OR IGNORE INTO generated_items (
                     user_id, channel_id, channel_title, video_id, video_title, video_url,
                     summary_ko, generation_status, error_message, generated_at
                 )
