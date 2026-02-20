@@ -282,6 +282,8 @@ def _resolve_session_secret() -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    from .core import DB_PATH
+    print(f"[info] DB 경로: {DB_PATH}")
     if not os.environ.get("ENCRYPT_KEY"):
         print(
             "[warn] ENCRYPT_KEY 환경변수가 설정되지 않았습니다. "
