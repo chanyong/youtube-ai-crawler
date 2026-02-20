@@ -58,15 +58,17 @@
       <button type="submit" style="flex:1;">채널 추가</button>
     </div>
   </form>
-  <form method="post" action="/run-now" style="margin-top:4px;">
-    <input type="hidden" name="csrf_token" value="{{ csrf }}">
-    <button type="submit" class="btn-warning">지금 스캔 설정</button>
-  </form>
 </div>
 
 <!-- 내 채널 목록 -->
 <div class="card">
-  <h3>내 채널 목록</h3>
+  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <h3 style="margin:0;">내 채널 목록</h3>
+    <form method="post" action="/run-now" style="margin:0;">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button type="submit" class="btn-warning" style="max-width:160px;">신규 영상 스캔</button>
+    </form>
+  </div>
   <table>
     <thead>
       <tr>
