@@ -293,9 +293,9 @@ def fetch_transcript(video_id: str) -> str:
             try:
                 ytt = YouTubeTranscriptApi()
                 items = ytt.list(video_id)
-            except Exception:
-                # 레거시 API fallback
-                items = YouTubeTranscriptApi.list_transcripts(video_id)
+            except AttributeError:
+                # 구버전 API (v0.x) fallback - 메서드 자체가 없을 때만
+                items = YouTubeTranscriptApi.list_transcripts(video_id)  # type: ignore[attr-defined]
 
             transcript = None
             try:
