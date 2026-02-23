@@ -111,7 +111,7 @@
     <thead>
       <tr>
         <th style="width:48px;">선택</th>
-        <th style="width:120px;">미리보기</th>
+        <th style="width:240px;">미리보기</th>
         <th>영상 제목</th>
         <th>채널</th>
         <th>공개 시각</th>
@@ -140,7 +140,7 @@
             data-video-id="{{ s['video_id'] | e }}"
             data-title="{{ (s['video_title'] or s['video_id']) | e }}"
             alt="썸네일"
-            style="width:116px;height:65px;object-fit:cover;border-radius:4px;cursor:pointer;display:block;"
+            style="width:232px;height:130px;object-fit:cover;border-radius:4px;cursor:pointer;display:block;"
             onerror="this.style.display='none'"
             title="클릭하여 영상 미리보기"
           >
@@ -194,7 +194,7 @@
     <table>
       <thead>
         <tr>
-          <th style="width:120px;">미리보기</th>
+          <th style="width:240px;">미리보기</th>
           <th>영상 제목</th>
           <th>채널</th>
           <th style="width:80px;">링크</th>
@@ -214,7 +214,7 @@
     <table>
     <thead>
       <tr>
-        <th style="width:120px;">미리보기</th>
+        <th style="width:240px;">미리보기</th>
         <th>영상 제목</th>
         <th>채널</th>
         <th>생성 시각</th>
@@ -232,7 +232,7 @@
             data-video-id="{{ h['video_id'] | e }}"
             data-title="{{ (h['video_title'] or h['video_id']) | e }}"
             alt="썸네일"
-            style="width:116px;height:65px;object-fit:cover;border-radius:4px;cursor:pointer;display:block;"
+            style="width:232px;height:130px;object-fit:cover;border-radius:4px;cursor:pointer;display:block;"
             onerror="this.style.display='none'"
             title="클릭하여 영상 미리보기"
           >
@@ -427,12 +427,12 @@
         const thumbUrl = "https://i.ytimg.com/vi/" + videoId + "/mqdefault.jpg";
         const safeTitle = item.title.replace(/"/g, "&quot;").replace(/</g, "&lt;");
         html += '<tr>' +
-          '<td style="padding:4px;width:120px;">' +
+          '<td style="padding:4px;width:240px;">' +
             '<img src="' + thumbUrl + '" class="yt-thumb"' +
             ' data-video-id="' + videoId + '"' +
             ' data-title="' + safeTitle + '"' +
             ' alt="썸네일"' +
-            ' style="width:116px;height:65px;object-fit:cover;border-radius:4px;cursor:pointer;display:block;"' +
+            ' style="width:232px;height:130px;object-fit:cover;border-radius:4px;cursor:pointer;display:block;"' +
             ' onerror="this.style.display=\'none\'"' +
             ' title="클릭하여 영상 미리보기">' +
           '</td>' +
