@@ -111,19 +111,12 @@ def scan_recent_episodes_for_user(user_id: int, per_channel: int = 5, reset: boo
                 title = entry.get("title", "(제목 없음)")
                 url = entry.get("link", f"https://www.youtube.com/watch?v={video_id}")
                 published = entry.get("published", "") or entry.get("updated", "")
-                con.execute(
+                cur = con.execute(
                     """
-                    INSERT INTO scanned_items (
+                    INSERT OR IGNORE INTO scanned_items (
                         user_id, channel_id, channel_title, video_id, video_title, video_url, published_at, scanned_at
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(user_id, video_id) DO UPDATE SET
-                        channel_id=excluded.channel_id,
-                        channel_title=excluded.channel_title,
-                        video_title=excluded.video_title,
-                        video_url=excluded.video_url,
-                        published_at=excluded.published_at,
-                        scanned_at=excluded.scanned_at
                     """,
                     (
                         user_id,
@@ -136,7 +129,7 @@ def scan_recent_episodes_for_user(user_id: int, per_channel: int = 5, reset: boo
                         now_iso(),
                     ),
                 )
-                scanned += 1
+                scanned += cur.rowcount
     return scanned
 
 
@@ -540,7 +533,7 @@ def run_now(request: Request, csrf_token: str = Form("")):
     if not _verify_csrf(request, csrf_token):
         return RedirectResponse("/dashboard?msg=csrf-error", status_code=303)
 
-    scanned_count = scan_recent_episodes_for_user(user["id"], per_channel=5, reset=True)
+    scanned_count = scan_recent_episodes_for_user(user["id"], per_channel=5, reset=False)
     return RedirectResponse(f"/dashboard?msg=run-done:{scanned_count}&generated_page=1&scanned_page=1", status_code=303)
 
 
